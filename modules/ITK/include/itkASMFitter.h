@@ -67,8 +67,45 @@ namespace itk {
         itkTypeMacro(ASMFitterResult, Object);
     };
 
+    //forward declaration for friend class
+    template<typename ASM> class ASMFitter;
+
+    /**
+     * This class is not meant to be instantiated by end users.
+     */
     template<typename ASM>
-    class ASMFitter : public Object, public statismo::ASMFitter<ASM> {
+    class ASMFitterImpl : public Object, public statismo::ASMFitter<ASM> {
+    friend class ASMFitter<ASM>;
+
+    public:
+
+        typedef ASMFitterImpl Self;
+        typedef Object Superclass;
+        typedef SmartPointer <Self> Pointer;
+        typedef SmartPointer<const Self> ConstPointer;
+
+        itkTypeMacro( Self, Object);
+
+
+    protected:
+
+        itkNewMacro( Self );
+
+        virtual typename ASM::FitterResultPointerType NewResult() const {
+            return ASM::FitterResultType::New();
+        }
+
+        virtual typename ASM::Impl::FitterPointerType NewInstance() const {
+            return ASMFitterImpl<ASM>::New();
+        }
+
+        virtual typename ASM::Impl::FitterPointerType This() {
+            return typename ASM::Impl::FitterPointerType(this);
+        }
+    };
+
+    template<typename ASM>
+    class ASMFitter : public Object {
     public:
 
         typedef ASMFitter Self;
@@ -77,19 +114,54 @@ namespace itk {
         typedef SmartPointer<const Self> ConstPointer;
 
         itkNewMacro( Self );
-        itkTypeMacro( ASMFitter, Object);
+        itkTypeMacro( Self, Object );
 
-        virtual typename ASM::FitterPointerType SetMesh(typename ASM::MeshPointerType mesh) {
-            ASMFitter::Pointer copy = ASMFitter::New();
-            copy->Init(this->m_configuration, this->m_model, mesh, this->m_targetImage, this->m_sampler->SetMesh(mesh), this->m_featureExtractor->SetMesh(mesh));
-            return copy;
+        void SetConfiguration(typename ASM::FitterConfigurationPointerType configuration) {
+            m_configuration = configuration;
         }
 
-    protected:
-        virtual typename ASM::FitterResultPointerType InstantiateResult() {
-            return ASM::FitterResultType::New();
+        void SetModel(typename ASM::ActiveShapeModelPointerType model) {
+            m_model = model;
         }
+
+        void SetMesh(typename ASM::MeshPointerType inputMesh) {
+            m_inputMesh = inputMesh;
+        }
+
+        void SetImage(typename ASM::ImagePointerType targetImage) {
+            m_targetImage = targetImage;
+        }
+
+        void SetSampler(typename ASM::PointSamplerPointerType sampler) {
+            m_sampler = sampler;
+        }
+
+        void Update() {
+            if (!m_impl) {
+                m_impl = ASMFitterImpl<ASM>::New();
+                m_impl->Init(m_configuration, m_model, m_sampler, m_targetImage, m_inputMesh);
+            } else {
+                m_impl = ASMFitterImpl<ASM>::New();
+                m_impl->Init(m_configuration, m_model, m_sampler, m_targetImage, m_inputMesh);
+                //m_impl = m_impl->SetConfiguration(m_configuration)->SetModel(m_model)->SetSampler(m_sampler)->SetImage(m_targetImage)->SetMesh(m_inputMesh);
+            }
+            m_output = m_impl->Fit();
+        }
+
+        typename ASM::FitterResultPointerType GetOutput() {
+            return m_output;
+        }
+
+    private:
+        typename ASM::FitterConfigurationPointerType m_configuration;
+        typename ASM::ActiveShapeModelPointerType m_model;
+        typename ASM::MeshPointerType m_inputMesh;
+        typename ASM::ImagePointerType m_targetImage;
+        typename ASM::PointSamplerPointerType m_sampler;
+        typename ASM::Impl::FitterPointerType m_impl;
+        typename ASM::FitterResultPointerType m_output;
     };
+
 }
 
 

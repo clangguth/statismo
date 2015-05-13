@@ -30,16 +30,24 @@ int main(int argc, char *argv[]) {
     //fitConfig->Init(5,5,5);
 
     ASM::FitterPointerType fitter = ASM::FitterType::New();
-    fitter->Init(fitConfig, model, mesh, image, ASM::PointSamplerPointerType(sampler.GetPointer()));
+    //fitter->Init(fitConfig, model, mesh, image, ASM::PointSamplerPointerType(sampler.GetPointer()));
+    fitter->SetConfiguration(fitConfig);
+    fitter->SetModel(model);
+    fitter->SetSampler(ASM::PointSamplerPointerType(sampler.GetPointer()));
+    fitter->SetImage(image);
+    fitter->SetMesh(mesh);
+
     for (int i=0; i < 25; ++i) {
         std::cout << "iteration " << i << " start" << std::endl;
-        ASM::FitterResultPointerType result = fitter->Fit();
+        fitter->Update();
+        ASM::FitterResultPointerType result = fitter->GetOutput();
         if (!result->IsValid()) {
             std::cout << "invalid result, aborting " <<std::endl;
             exit(0);
         }
         std::cout << "coeffs (adj)" << result->GetCoefficients() << std::endl;
-        fitter = fitter->SetMesh(result->GetMesh());
+        fitter->SetMesh(result->GetMesh());
+        fitter->GetOutput();
     }
     return 0;
 }
