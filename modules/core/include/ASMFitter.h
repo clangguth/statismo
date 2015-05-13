@@ -96,14 +96,19 @@ namespace statismo {
         bool m_isValid;
         typename ASM::StatisticalModelType::VectorType m_coefficients;
         typename ASM::MeshPointerType m_mesh;
+
     };
 
+    /**
+     * This is an immutable class: all setters actually return a pointer to a (potentially new) instance.
+     *
+     */
     template <typename ASM>
     class ASMFitter {
     public:
 
         void Init(typename ASM::FitterConfigurationPointerType configuration, typename ASM::ActiveShapeModelPointerType model,
-                  typename ASM::MeshPointerType inputMesh, typename ASM::ImagePointerType targetImage, typename ASM::PointSamplerPointerType sampler) {
+                  typename ASM::PointSamplerPointerType sampler, typename ASM::ImagePointerType targetImage, typename ASM::MeshPointerType inputMesh) {
             m_configuration = configuration;
             m_model = model;
             m_inputMesh = inputMesh;
@@ -112,7 +117,32 @@ namespace statismo {
             m_featureExtractor = m_model->GetFeatureExtractor()->SetImage(m_targetImage)->SetMesh(m_inputMesh);
         }
 
-        typename ASM::FitterResultPointerType Fit() {
+        typename ASM::Impl::FitterPointerType SetConfiguration(typename ASM::FitterConfigurationPointerType configuration) {
+            if (m_configuration == configuration) return This();
+            return NewInstance()->SetFields(configuration, m_model, m_inputMesh, m_targetImage, m_sampler, m_featureExtractor);
+        }
+
+        typename ASM::Impl::FitterPointerType SetModel(typename ASM::ActiveShapeModelPointerType model) {
+            if (m_model == model) return This();
+            return NewInstance()->SetFields(m_configuration, model, m_inputMesh, m_targetImage, m_sampler, model->GetFeatureExtractor()->SetImage(m_targetImage)->SetMesh(m_inputMesh));
+        }
+
+        typename ASM::Impl::FitterPointerType SetMesh(typename ASM::MeshPointerType inputMesh) {
+            if (m_inputMesh == inputMesh) return This();
+            return NewInstance()->SetFields(m_configuration, m_model, inputMesh, m_targetImage, m_sampler->SetMesh(inputMesh), m_featureExtractor->SetMesh(inputMesh));
+        }
+
+        typename ASM::Impl::FitterPointerType SetImage(typename ASM::ImagePointerType targetImage) {
+            if (m_targetImage == targetImage) return This();
+            return NewInstance()->SetFields(m_configuration, m_model, m_inputMesh, targetImage, m_sampler, m_featureExtractor->SetImage(targetImage));
+        }
+
+        typename ASM::Impl::FitterPointerType SetSampler(typename ASM::PointSamplerPointerType sampler) {
+            if (m_sampler == sampler) return This();
+            return NewInstance()->SetFields(m_configuration, m_model, m_inputMesh, m_targetImage, sampler->SetMesh(m_inputMesh), m_featureExtractor);
+        }
+
+        typename ASM::FitterResultPointerType Fit() const {
             typename ASM::StatisticalModelType::PointValueListType constraints;
             std::vector<ASMProfile> profiles = m_model->GetProfiles();
 
@@ -142,7 +172,7 @@ namespace statismo {
                 }
             }
 
-            typename ASM::FitterResultPointerType result = InstantiateResult();
+            typename ASM::FitterResultPointerType result = NewResult();
             if (constraints.size() > 0) {
                 //FIXME: find rigid transformation which minimizes the distances between the constraint pair points
 
@@ -163,9 +193,13 @@ namespace statismo {
             return result;
         }
 
-        virtual typename ASM::FitterPointerType SetMesh(typename ASM::MeshPointerType mesh) = 0;
-
     protected:
+        virtual typename ASM::FitterResultPointerType NewResult() const = 0;
+        virtual typename ASM::Impl::FitterPointerType NewInstance() const = 0;
+        virtual typename ASM::Impl::FitterPointerType This() = 0;
+
+    private:
+
         typename ASM::FitterConfigurationPointerType m_configuration;
         typename ASM::ActiveShapeModelPointerType m_model;
         typename ASM::MeshPointerType m_inputMesh;
@@ -173,21 +207,18 @@ namespace statismo {
         typename ASM::PointSamplerPointerType m_sampler;
         typename ASM::FeatureExtractorPointerType m_featureExtractor;
 
-        void Init(typename ASM::FitterConfigurationPointerType configuration, typename ASM::ActiveShapeModelPointerType model,
-                  typename ASM::MeshPointerType inputMesh, typename ASM::ImagePointerType targetImage, typename ASM::PointSamplerPointerType sampler, typename ASM::FeatureExtractorPointerType featureExtractor) {
+        typename ASM::Impl::FitterPointerType SetFields(typename ASM::FitterConfigurationPointerType configuration, typename ASM::ActiveShapeModelPointerType model,
+                                                        typename ASM::MeshPointerType inputMesh, typename ASM::ImagePointerType targetImage, typename ASM::PointSamplerPointerType sampler, typename ASM::FeatureExtractorPointerType featureExtractor) {
             m_configuration = configuration;
             m_model = model;
             m_inputMesh = inputMesh;
             m_targetImage = targetImage;
             m_sampler = sampler;
             m_featureExtractor = featureExtractor;
+            return This();
         }
 
-        virtual typename ASM::FitterResultPointerType InstantiateResult() = 0;
-
-
-    private:
-        float FindBestMatchingPointForProfile(typename ASM::PointType &result, unsigned pointId, const statismo::MultiVariateNormalDistribution &profile) {
+        float FindBestMatchingPointForProfile(typename ASM::PointType &result, unsigned pointId, const statismo::MultiVariateNormalDistribution &profile) const {
             float bestFeatureDistance = -1;
 
             std::vector<typename ASM::PointType> samples = m_sampler->SampleAtPointId(pointId);

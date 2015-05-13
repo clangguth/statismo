@@ -48,6 +48,13 @@
 
 namespace itk {
 
+    template <typename ASM>
+    class ASMImplTraits {
+    public:
+        typedef itk::ASMFitterImpl<ASM> FitterType;
+        typedef itk::SmartPointer<FitterType> FitterPointerType;
+    };
+
     template<typename MPixelType, typename IPixelType, unsigned int Dimensions>
     class ASMTraits {
     public:
@@ -59,21 +66,22 @@ namespace itk {
         }
 
         typedef itk::ASMTraits<MeshPixelType, ImagePixelType, Dimensions> ASM;
+        typedef itk::ASMImplTraits<ASM> Impl;
 
-        typedef itk::Point <MeshPixelType, Dimensions> PointType;
-        typedef itk::Vector <MeshPixelType, Dimensions> VectorType;
+        typedef itk::Point<MeshPixelType, Dimensions> PointType;
+        typedef itk::Vector<MeshPixelType, Dimensions> VectorType;
 
 
-        typedef itk::Mesh <MeshPixelType, Dimensions> MeshType;
+        typedef itk::Mesh<MeshPixelType, Dimensions> MeshType;
         typedef itk::SmartPointer<MeshType> MeshPointerType;
 
-        typedef itk::Image <ImagePixelType, Dimensions> ImageType;
+        typedef itk::Image<ImagePixelType, Dimensions> ImageType;
         typedef itk::SmartPointer<ImageType> ImagePointerType;
 
         typedef itk::ASMPointSampler<ASM> PointSamplerType;
         typedef itk::SmartPointer<PointSamplerType> PointSamplerPointerType;
 
-        typedef itk::StandardMeshRepresenter<MeshPixelType , Dimensions> MeshRepresenterType;
+        typedef itk::StandardMeshRepresenter<MeshPixelType, Dimensions> MeshRepresenterType;
         typedef itk::SmartPointer<MeshRepresenterType> MeshRepresenterPointerType;
 
         typedef itk::StatisticalModel<MeshType> StatisticalModelType;
