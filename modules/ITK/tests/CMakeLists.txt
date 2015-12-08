@@ -6,6 +6,7 @@ set( _ITKTests
 foreach( _test ${_ITKTests} )
   add_executable( ${_test} ${_test}.cxx )
   target_link_libraries( ${_test} statismo_core ${ITK_LIBRARIES} )
+  cotire( ${_test} )
 endforeach()
 
 add_test( NAME itkStandardImageRepresenterTest

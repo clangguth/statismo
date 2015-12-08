@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.10)
+cmake_minimum_required(VERSION 2.8.12)
 project(statismo)
 
 if( POLICY CMP0042 )
@@ -29,6 +29,8 @@ set( CMAKE_MODULE_PATH
   ${CMAKE_MODULE_PATH}
   ${CMAKE_CURRENT_SOURCE_DIR}/cmake
 )
+
+include( cotire )
 
 if( APPLE )
   include( CMakeOSXVariables )

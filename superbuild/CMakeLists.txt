@@ -8,6 +8,8 @@ set( CMAKE_MODULE_PATH
   ${CMAKE_CURRENT_SOURCE_DIR}/../cmake
 )
 
+include ( cotire )
+
 if( APPLE )
   include( CMakeOSXVariables )
 endif()

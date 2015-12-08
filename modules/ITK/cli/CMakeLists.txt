@@ -19,6 +19,7 @@ include_directories( BEFORE
 foreach( e ${_cli_files} )
   add_executable( ${e} "${e}.cxx" )
   target_link_libraries( ${e} statismo_core ${ITK_LIBRARIES} ${Boost_LIBRARIES} )
+  cotire( ${e} )
   install(
   TARGETS ${e}
   DESTINATION ${INSTALL_BIN_DIR}

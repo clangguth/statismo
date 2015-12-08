@@ -22,5 +22,6 @@ foreach( e ${_examples} )
   add_executable( ${e} ${e}.cxx
   )
   target_link_libraries( ${e} statismo_core ${ITK_LIBRARIES} )
+  cotire( ${e} )
 endforeach()
 

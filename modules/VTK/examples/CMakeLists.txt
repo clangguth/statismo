@@ -19,5 +19,6 @@ set( _examples
 foreach( e ${_examples} )
   add_executable( ${e} ${e}.cxx )
   target_link_libraries( ${e} statismo_VTK )
+  cotire( ${e} )
 endforeach()
 
