@@ -8,8 +8,9 @@ set( _VTKTests
 foreach( _test ${_VTKTests} )
   add_executable( ${_test} ${_test}.cxx )
   target_link_libraries( ${_test} statismo_VTK )
-  cotire( ${_test} )
 endforeach()
+
+cotire( ${_VTKTests} )
 
 add_test( NAME PosteriorModelBuilderTest
   COMMAND PosteriorModelBuilderTest ${statismo_SOURCE_DIR}/data
