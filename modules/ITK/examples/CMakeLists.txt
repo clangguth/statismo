@@ -8,6 +8,7 @@ endif()
 
 set( _examples
   itkActiveShapeModelTest
+  itkBuildActiveShapeModel
   itkBuildGaussianProcessDeformationModel
   itkBuildShapeModel_75pcvar
   itkLandmarkConstrainedShapeModelFitting

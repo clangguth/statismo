@@ -142,6 +142,21 @@ namespace itk {
             return copy.GetPointer();
         }
 
+        virtual SelfType *CloneForMesh(MeshType* mesh) const {
+
+            PointsLocatorPointerType locator = PointsLocatorType::New();
+            locator->SetPoints(const_cast<PointsContainerType *>(mesh->GetPoints()));
+            locator->Initialize();
+
+            MeshAdapterPointerType adapter = MeshAdapterType::New();
+            adapter->SetMesh(mesh);
+            PointNormalsContainerPointer normals = adapter->GetPointNormals();
+
+            Pointer copy = new ASMNormalDirectionPointSampler(mesh, locator, normals, m_numberOfPoints, m_pointSpacing);
+            //Pointer copy = ASMNormalDirectionPointSampler::Clone(); // this does NOT work: at runtime, it's resolved to the superclass....
+            return copy.GetPointer();
+        }
+
         virtual std::vector<PointType> Sample(const PointType &targetPoint) const {
             //FIXME: this only works for TriangleMeshes for now.
 

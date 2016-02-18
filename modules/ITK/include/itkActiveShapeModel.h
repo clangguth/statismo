@@ -119,6 +119,10 @@ namespace itk {
             }
         }
 
+        void Save(const std::string& filename) {
+            GetstatismoImplObj()->Save(filename);
+        }
+
     private:
         ImplType* m_impl;
         StatisticalModelPointerType m_ssm;

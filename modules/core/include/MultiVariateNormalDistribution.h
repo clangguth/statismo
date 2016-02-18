@@ -49,7 +49,10 @@ namespace statismo {
         MatrixType covariance;
         MatrixType covInv;
 
+
     public:
+
+        typedef std::vector<VectorType> DataType;
 
         MultiVariateNormalDistribution(VectorType mean, MatrixType covariance): mean(mean), covariance(covariance) {
             if (!Utils::PseudoInverse(covariance, covInv)) {
@@ -57,11 +60,47 @@ namespace statismo {
             }
         }
 
-        float MahalanobisDistance(VectorType data) const {
+        const VectorType& GetMean() const {
+            return mean;
+        }
+
+        const MatrixType& GetCovariance() const {
+            return covariance;
+        }
+
+        float MahalanobisDistance(const VectorType& data) const {
             VectorType x0 = data - mean;
 
             float d = sqrt(x0.dot((covInv * x0)));
             return d;
+        }
+
+        static MultiVariateNormalDistribution EstimateFromData(const DataType& data) {
+            unsigned int numSamples = data.size();
+
+            VectorType mean = data[0];
+            for (unsigned int i= 1; i < numSamples; ++i) {
+                mean += data[i];
+            }
+            mean /= numSamples;
+
+            MatrixType covariance(mean.rows(), mean.rows());
+            for (int r = covariance.rows() - 1; r >= 0; --r) {
+                for (int c =covariance.cols() - 1; c >= 0; --c ) {
+                    covariance(r,c) = 0;
+                }
+            }
+
+            for (DataType::const_iterator item = data.begin(); item != data.end(); item++) {
+                VectorType diff = (*item) - mean;
+                MatrixType outer = diff * diff.transpose();
+                covariance = covariance + outer;
+            }
+
+            if (numSamples > 1) {
+                covariance /= (numSamples - 1);
+            }
+            return MultiVariateNormalDistribution(mean, covariance);
         }
     };
 }

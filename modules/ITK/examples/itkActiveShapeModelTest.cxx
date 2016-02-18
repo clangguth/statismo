@@ -11,9 +11,7 @@
 #include "itkASMGaussianGradientImagePreprocessor.h"
 #include "itkActiveShapeModel.h"
 #include "itkASMFitting.h"
-#include "itkMeshFileWriter.h"
 #include "itkTimeProbe.h"
-//#include "itkRigidTransformModelBuilder.h"
 
 typedef itk::Mesh<float, 3> MeshType;
 typedef itk::Image<float, 3> ImageType;
@@ -41,7 +39,6 @@ statismo::VectorType fromVnlVector(const VnlVectorType& v) {
 
 }
 
-
 int main(int argc, char *argv[]) {
 
 
@@ -50,9 +47,10 @@ int main(int argc, char *argv[]) {
     statismo::ASMFeatureExtractorFactory<MeshType, ImageType>::RegisterImplementation(itk::ASMNormalDirectionFeatureExtractorFactory<MeshType, ImageType>::GetInstance());
     statismo::ASMImagePreprocessorFactory<MeshType, ImageType>::RegisterImplementation(itk::ASMGaussianGradientImagePreprocessorFactory<MeshType, ImageType>::GetInstance());
 
+    RepresenterType::Pointer representer = RepresenterType::New();
+
     std::string modelname("/export/skulls/data/shapes/submandibular_gland_l/aligned/registered-0248/model-asm/asm-5.h5");
     ActiveShapeModelType::Pointer aModel = ActiveShapeModelType::New();
-    RepresenterType::Pointer representer = RepresenterType::New();
     aModel->Load(representer,  modelname.c_str());
 
     itk::ASMNormalDirectionPointSampler<MeshType, ImageType>::Pointer fitSampler = itk::ASMNormalDirectionPointSampler<MeshType, ImageType>::New();
@@ -60,10 +58,6 @@ int main(int argc, char *argv[]) {
     fitSampler->SetPointSpacing(1);
 
     statismo::ASMFittingConfiguration fitConfig(3,5,3);
-
-    ImageReaderType::Pointer reader = ImageReaderType::New();
-    //reader->SetFileName("/export/skulls/data/shapes/submandibular_gland_l/aligned/initial/volume-ct/pddca-0522c0002.nii");
-    reader->SetFileName("/export/skulls/data/shapes/submandibular_gland_l/raw/normalized/volume-ct/pddca-0522c0002.nii");
 
     std::vector<PointType> reference;
     std::vector<PointType> target;
@@ -101,8 +95,11 @@ int main(int argc, char *argv[]) {
     RigidTransformType::Pointer currentTransform = 0;
     if (reference.size()) currentTransform = representer->ComputeRigidTransformFromLandmarks(reference, target);
 
-    reader->Update();
-    ImageType::Pointer image = reader->GetOutput();
+    ImageReaderType::Pointer imgReader = ImageReaderType::New();
+    imgReader->SetFileName("/export/skulls/data/shapes/submandibular_gland_l/raw/normalized/volume-ct/pddca-0522c0002.nii");
+
+    imgReader->Update();
+    ImageType::Pointer image = imgReader->GetOutput();
     statismo::ASMPreprocessedImage<MeshType> *pimage = aModel->GetstatismoImplObj()->GetImagePreprocessor()->Preprocess(image);
 
     // just for testing

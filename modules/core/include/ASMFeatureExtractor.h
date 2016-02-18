@@ -65,7 +65,9 @@ namespace statismo {
         virtual void Delete() = 0;
         virtual FeatureExtractorType* Clone() const = 0;
         virtual FeatureExtractorType* CloneForTarget(const ActiveShapeModelType* const model, const VectorType& coefficients, const RigidTransformPointerType transform) const = 0;
+        virtual FeatureExtractorType* CloneForMesh(TPointSet* mesh) const = 0;
         virtual bool ExtractFeatures(statismo::VectorType& output, const PreprocessedImageType* const image, const PointType& point) const = 0;
+        virtual void Save(const H5::Group& h5Group) const = 0;
     };
 
     template<typename TPointSet, typename TImage>

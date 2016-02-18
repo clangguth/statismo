@@ -122,6 +122,78 @@ namespace statismo {
             return r;
         }
 
+        void Save(const std::string& filename) {
+            // Save the contained SSM
+            GetStatisticalModel()->Save(filename);
+
+            H5::H5File file;
+
+            try {
+                file = H5::H5File(filename, H5F_ACC_RDWR);
+            } catch (H5::Exception &e) {
+                std::string msg(std::string("could not open HDF5 file \n") + e.getCDetailMsg());
+                throw StatisticalModelException(msg.c_str());
+            }
+
+            H5::Group rootGroup = file.openGroup("/");
+
+            H5::Group asmGroup = rootGroup.createGroup("activeShapeModel");
+
+            HDF5Utils::writeIntAttribute(asmGroup, "majorVersion", 1);
+            HDF5Utils::writeIntAttribute(asmGroup, "minorVersion", 0);
+
+            // write feature extractor and image preprocessor metadata
+            H5::Group feGroup = asmGroup.createGroup("featureExtractor");
+            m_featureExtractor->Save(feGroup);
+            feGroup.close();
+
+            H5::Group ppGroup = asmGroup.createGroup("imagePreprocessor");
+            m_preprocessor->Save(ppGroup);
+            ppGroup.close();
+
+            // write profiles
+            H5::Group profilesGroup = asmGroup.createGroup("profiles");
+
+            std::vector<int> pointIds;
+            unsigned int profileLength = 0;
+
+            for (std::vector<ASMProfile>::const_iterator it = m_profiles.begin(); it != m_profiles.end(); it++) {
+                pointIds.push_back((*it).GetPointId());
+                if (profileLength == 0) {
+                    profileLength = (*it).GetDistribution().GetCovariance().rows();
+                }
+            }
+
+            MatrixType means(m_profiles.size(), profileLength);
+            MatrixType covariances(m_profiles.size() * profileLength, profileLength);
+
+            unsigned int index = 0;
+            for (std::vector<ASMProfile>::const_iterator it = m_profiles.begin(); it != m_profiles.end(); it++) {
+                VectorType mean = (*it).GetDistribution().GetMean();
+                means.block(index, 0, 1, profileLength) = mean.transpose().block(0, 0, 1, profileLength);
+
+                MatrixType cov = (*it).GetDistribution().GetCovariance();
+                covariances.block(index * profileLength, 0, profileLength, profileLength) = cov.block(0, 0, profileLength, profileLength);
+                ++index;
+            }
+
+            HDF5Utils::writeIntAttribute(profilesGroup, "numberOfPoints", m_profiles.size());
+            HDF5Utils::writeIntAttribute(profilesGroup, "profileLength", profileLength);
+
+            HDF5Utils::writeArray(profilesGroup, "pointIds", pointIds);
+            HDF5Utils::writeMatrix(profilesGroup, "means", means);
+            HDF5Utils::writeMatrix(profilesGroup, "covariances", covariances);
+
+            profilesGroup.close();
+
+            // clean up
+            asmGroup.close();
+            rootGroup.close();
+            file.close();
+
+
+        }
+
         static ActiveShapeModel<TPointSet, TImage> *Load(RepresenterType *representer,
                                                                const std::string &filename) {
             H5::H5File file;
@@ -143,17 +215,17 @@ namespace statismo {
             H5::Group profilesGroup = asmGroup.openGroup("profiles");
 
             std::vector<int> pointIds;
-            statismo::MatrixType means;
-            statismo::MatrixType covariances;
+            MatrixType means;
+            MatrixType covariances;
 
-            unsigned int numPoints = (unsigned int) statismo::HDF5Utils::readIntAttribute(profilesGroup,
+            unsigned int numPoints = (unsigned int) HDF5Utils::readIntAttribute(profilesGroup,
                                                                                           "numberOfPoints");
-            unsigned int profileLength = (unsigned int) statismo::HDF5Utils::readIntAttribute(profilesGroup,
+            unsigned int profileLength = (unsigned int) HDF5Utils::readIntAttribute(profilesGroup,
                                                                                               "profileLength");
 
-            statismo::HDF5Utils::readMatrix(profilesGroup, "covariances", covariances);
-            statismo::HDF5Utils::readArray(profilesGroup, "pointIds", pointIds);
-            statismo::HDF5Utils::readMatrix(profilesGroup, "means", means);
+            HDF5Utils::readMatrix(profilesGroup, "covariances", covariances);
+            HDF5Utils::readArray(profilesGroup, "pointIds", pointIds);
+            HDF5Utils::readMatrix(profilesGroup, "means", means);
 
             std::vector<ASMProfile> profiles;
             profiles.reserve(numPoints);
@@ -161,16 +233,16 @@ namespace statismo {
             for (unsigned int i = 0; i < numPoints; ++i) {
                 unsigned int covOffset = i * profileLength;
 
-                statismo::VectorType mean = means.row(i);
+                VectorType mean = means.row(i);
 
-                statismo::MatrixType cov(profileLength, profileLength);
+                MatrixType cov(profileLength, profileLength);
                 cov.block(0, 0, profileLength, profileLength) = covariances.block(covOffset, 0, profileLength,
                                                                                   profileLength);
 
 
-                statismo::MultiVariateNormalDistribution mvd(mean, cov);
+                MultiVariateNormalDistribution mvd(mean, cov);
 
-                profiles.push_back(statismo::ASMProfile(pointIds[i], mvd));
+                profiles.push_back(ASMProfile(pointIds[i], mvd));
             }
 
             std::string ppId = HDF5Utils::readStringAttribute(ppGroup, "identifier");
@@ -198,6 +270,11 @@ namespace statismo {
 
             return am;
         }
+
+        static ActiveShapeModel<TPointSet, TImage> *Create(const StatisticalModelType *statisticalModel, const ImagePreprocessorType* preprocessor, const FeatureExtractorType *fe,
+                                                           std::vector<ASMProfile> &profiles) {
+            return new ActiveShapeModel<TPointSet, TImage>(statisticalModel, preprocessor, fe, profiles);
+        };
 
     protected:
         ActiveShapeModel(const StatisticalModelType *statisticalModel, const ImagePreprocessorType* preprocessor, const FeatureExtractorType *fe,
